@@ -33,9 +33,11 @@ rg -n --hidden --glob '!.git/**' --glob '!.venv/**' 'sk-[A-Za-z0-9]{20,}|AKIA[0-
 
 `render.yaml` already configures:
 - `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-- persistent disk at `/var/data`
-- `DATABASE_URL=sqlite:////var/data/med_dev_vi.db`
+- free web service plan
+- `DATABASE_URL=sqlite:///./med_dev_vi.db`
 - `ALLOWED_HOSTS=med-dev-vi.onrender.com,*.onrender.com`
+
+Note for free tier: SQLite data may reset on redeploy/restart because persistent disks are paid.
 
 ## 5. Set production secrets in Render
 
