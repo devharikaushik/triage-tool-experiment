@@ -13,7 +13,7 @@ services:
         value: sqlite:////var/data/med_dev_vi.db
       - key: ALLOWED_HOSTS
         value: med-dev-vi.onrender.com,*.onrender.com
-    disks:
-      - name: med-dev-vi-data
-        mountPath: /var/data
-        sizeGB: 1
+    disk:
+      name: med-dev-vi-data
+      mountPath: /var/data
+      sizeGB: 1
