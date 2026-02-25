@@ -29,11 +29,13 @@ rg -n --hidden --glob '!.git/**' --glob '!.venv/**' 'sk-[A-Za-z0-9]{20,}|AKIA[0-
 2. In Render: `New +` -> `Blueprint`.
 3. Pick your repo; Render reads `render.yaml`.
 4. Deploy.
+5. When build completes, open the URL Render shows (for example: `https://med-dev-vi.onrender.com`).
 
 `render.yaml` already configures:
 - `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
 - persistent disk at `/var/data`
 - `DATABASE_URL=sqlite:////var/data/med_dev_vi.db`
+- `ALLOWED_HOSTS=med-dev-vi.onrender.com,*.onrender.com`
 
 ## 5. Set production secrets in Render
 
