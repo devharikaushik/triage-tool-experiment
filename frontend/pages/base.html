@@ -6,42 +6,114 @@
   <title>Med-Dev-Vi</title>
   <style>
     :root {
-      --bg: #f7f8fa;
+      --bg: #f8fbff;
+      --bg-accent: #eefaf6;
       --panel: #ffffff;
-      --text: #1f2937;
-      --muted: #6b7280;
-      --line: #d1d5db;
+      --text: #13233a;
+      --muted: #5e6c84;
+      --line: #d3deea;
       --primary: #0f766e;
+      --primary-strong: #0b5f59;
+      --highlight: #f59e0b;
       --danger: #b91c1c;
+      --shadow: 0 14px 36px rgba(16, 38, 66, 0.08);
     }
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
     body {
       margin: 0;
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      background: var(--bg);
+      font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, #dbf7f0 0%, transparent 40%),
+        radial-gradient(circle at 90% 10%, #e7f0ff 0%, transparent 45%),
+        linear-gradient(160deg, var(--bg), var(--bg-accent));
       color: var(--text);
+      min-height: 100vh;
     }
     .container {
       max-width: 980px;
-      margin: 24px auto;
+      margin: 28px auto;
       padding: 0 16px;
+    }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 18px;
+      background: linear-gradient(120deg, #0f766e, #155e75);
+      color: #f8fffe;
+      padding: 22px 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      animation: riseIn 460ms ease-out;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      top: -40px;
+      right: -20px;
+      width: 160px;
+      height: 160px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+    .eyebrow {
+      display: inline-block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      margin-bottom: 8px;
     }
     .card {
       background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 16px;
+      border: 1px solid #dbe6f2;
+      border-radius: 14px;
+      padding: 18px;
       margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      animation: riseIn 420ms ease-out;
     }
-    h1, h2, h3 { margin-top: 0; }
-    label { display: block; font-weight: 600; margin-bottom: 4px; }
+    .card:hover {
+      transform: translateY(-2px);
+      transition: transform 180ms ease;
+    }
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    h1 {
+      font-size: 34px;
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+    h2 {
+      font-size: 26px;
+    }
+    h3 {
+      font-size: 22px;
+    }
+    label {
+      display: block;
+      font-weight: 650;
+      margin-bottom: 6px;
+      color: #1d3557;
+    }
     input, select, textarea {
       width: 100%;
-      padding: 8px;
+      padding: 10px;
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 10px;
       margin-bottom: 12px;
       font: inherit;
+      background: #fcfeff;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #20938a;
+      box-shadow: 0 0 0 4px rgba(32, 147, 138, 0.15);
     }
     .grid {
       display: grid;
@@ -55,23 +127,38 @@
     }
     .btn {
       display: inline-block;
-      padding: 8px 12px;
-      border: 1px solid var(--primary);
-      border-radius: 6px;
-      background: var(--primary);
+      padding: 9px 14px;
+      border: 1px solid var(--primary-strong);
+      border-radius: 10px;
+      background: linear-gradient(120deg, var(--primary), var(--primary-strong));
       color: white;
       text-decoration: none;
       cursor: pointer;
+      font-weight: 650;
+      transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(15, 118, 110, 0.25);
+    }
+    .btn:active {
+      transform: translateY(0);
+      opacity: 0.95;
     }
     .btn.secondary {
-      background: transparent;
+      background: #f8fbff;
       color: var(--primary);
+      border-color: #9dc8c3;
     }
-    .muted { color: var(--muted); }
+    .muted {
+      color: var(--muted);
+      margin-top: 0;
+    }
     .disclaimer {
       border-left: 4px solid var(--danger);
       background: #fef2f2;
-      padding: 10px;
+      border-radius: 10px;
+      padding: 11px 12px;
       margin-top: 16px;
       font-weight: 600;
     }
@@ -86,22 +173,54 @@
       align-items: center;
       gap: 8px;
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 10px;
       padding: 8px;
+      background: #fbfdff;
+      transition: border-color 140ms ease;
+    }
+    .checkbox-item:hover {
+      border-color: #9ab4d0;
     }
     .checkbox-item input { width: auto; margin: 0; }
     .section-title {
       margin: 16px 0 8px;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px dashed #c9d7e7;
       padding-bottom: 4px;
     }
-    ul { margin-top: 0; }
+    ul, ol { margin-top: 0; }
+    @keyframes riseIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @media (max-width: 640px) {
+      .hero {
+        padding: 18px 14px;
+      }
+      h1 {
+        font-size: 28px;
+      }
+      h2 {
+        font-size: 22px;
+      }
+      h3 {
+        font-size: 19px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Med-Dev-Vi</h1>
-    <p class="muted">Role-Based Clinical Reasoning & Resource-Aware Triage Tool</p>
+    <div class="hero">
+      <span class="eyebrow">Clinical Assistant</span>
+      <h1>Med-Dev-Vi</h1>
+      <p class="muted" style="color:#dffaf4;">Role-Based Clinical Reasoning & Resource-Aware Triage Tool</p>
+    </div>
     {% block content %}{% endblock %}
     <div class="disclaimer">{{ disclaimer }}</div>
   </div>
