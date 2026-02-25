@@ -1,0 +1,46 @@
+{% extends "pages/base.html" %}
+{% block content %}
+<div class="card">
+  <div class="row">
+    <a class="btn secondary" href="/">Home</a>
+    <a class="btn secondary" href="/peripheral/update">Update Resources</a>
+  </div>
+  <h2>Peripheral Healthcare Worker Mode</h2>
+  <p><strong>Centre:</strong> {{ centre.name }}</p>
+  {% set action_url = '/peripheral' %}
+  {% include "components/patient_form.html" %}
+</div>
+
+{% if output %}
+<div class="card">
+  <h2>Resource-Aware Triage Output</h2>
+
+  <h3>Clinical Risk Level</h3>
+  <p>{{ output['Clinical Risk Level'] }}</p>
+
+  <h3>Stabilization Possible Here (Yes/Partial/No)</h3>
+  <p>{{ output['Stabilization Possible Here'] }}</p>
+
+  <h3>Missing Required Resources</h3>
+  {% if output['Missing Required Resources'] %}
+    <ul>
+      {% for item in output['Missing Required Resources'] %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>None</p>
+  {% endif %}
+
+  <h3>Refer Immediately (Yes/No)</h3>
+  <p>{{ output['Refer Immediately'] }}</p>
+
+  <h3>Steps Before Referral</h3>
+  <ul>
+    {% for step in output['Steps Before Referral'] %}
+      <li>{{ step }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

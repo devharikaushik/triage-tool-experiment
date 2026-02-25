@@ -1,0 +1,59 @@
+<form method="post" action="{{ action_url }}">
+  <div class="grid">
+    <div>
+      <label>Age</label>
+      <input type="number" name="age" required value="{{ patient.age if patient else '' }}" />
+    </div>
+    <div>
+      <label>Sex</label>
+      <select name="sex" required>
+        <option value="">Select</option>
+        {% set selected_sex = patient.sex if patient else '' %}
+        <option value="Male" {% if selected_sex == 'Male' %}selected{% endif %}>Male</option>
+        <option value="Female" {% if selected_sex == 'Female' %}selected{% endif %}>Female</option>
+        <option value="Other" {% if selected_sex == 'Other' %}selected{% endif %}>Other</option>
+      </select>
+    </div>
+  </div>
+
+  <label>Chief Complaint</label>
+  <input type="text" name="chief_complaint" required value="{{ patient.chief_complaint if patient else '' }}" />
+
+  <label>Symptom Duration</label>
+  <input type="text" name="symptom_duration" required value="{{ patient.symptom_duration if patient else '' }}" />
+
+  <label>Symptoms</label>
+  <textarea name="symptoms" rows="4" required>{{ patient.symptoms if patient else '' }}</textarea>
+
+  <h3 class="section-title">Vital Signs</h3>
+  <div class="grid">
+    <div>
+      <label>Temperature</label>
+      <input type="text" name="temperature" required value="{{ patient.temperature if patient else '' }}" />
+    </div>
+    <div>
+      <label>Pulse</label>
+      <input type="text" name="pulse" required value="{{ patient.pulse if patient else '' }}" />
+    </div>
+    <div>
+      <label>Blood Pressure</label>
+      <input type="text" name="blood_pressure" required value="{{ patient.blood_pressure if patient else '' }}" />
+    </div>
+    <div>
+      <label>Respiratory Rate</label>
+      <input type="text" name="respiratory_rate" required value="{{ patient.respiratory_rate if patient else '' }}" />
+    </div>
+    <div>
+      <label>Oxygen Saturation</label>
+      <input type="text" name="oxygen_saturation" required value="{{ patient.oxygen_saturation if patient else '' }}" />
+    </div>
+  </div>
+
+  <label>Lab Values</label>
+  <textarea name="lab_values" rows="3" required>{{ patient.lab_values if patient else '' }}</textarea>
+
+  <label>Comorbidities (optional)</label>
+  <textarea name="comorbidities" rows="2">{{ patient.comorbidities if patient else '' }}</textarea>
+
+  <button class="btn" type="submit">Generate Output</button>
+</form>

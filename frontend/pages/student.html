@@ -1,0 +1,51 @@
+{% extends "pages/base.html" %}
+{% block content %}
+<div class="card">
+  <div class="row">
+    <a class="btn secondary" href="/">Home</a>
+  </div>
+  <h2>Student Mode</h2>
+  {% set action_url = '/student' %}
+  {% include "components/patient_form.html" %}
+</div>
+
+{% if output %}
+<div class="card">
+  <h2>Structured Output</h2>
+
+  <h3>Problem Representation</h3>
+  <p>{{ output['Problem Representation'] }}</p>
+
+  <h3>Dominant Syndrome</h3>
+  <p>{{ output['Dominant Syndrome'] }}</p>
+
+  <h3>Top 3 Differentials (with reasoning)</h3>
+  <ul>
+    {% for item in output['Top 3 Differentials'] %}
+      <li><strong>{{ item.diagnosis }}:</strong> {{ item.reasoning }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Red Flags</h3>
+  <ul>
+    {% for item in output['Red Flags'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Broad Management Principles</h3>
+  <ul>
+    {% for item in output['Broad Management Principles'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Critical Missing Information</h3>
+  <ul>
+    {% for item in output['Critical Missing Information'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "pages/base.html" %}
+{% block content %}
+<div class="card">
+  <div class="row">
+    <a class="btn secondary" href="/">Home</a>
+    {% if existing %}
+      <a class="btn secondary" href="/peripheral">Back to Peripheral Mode</a>
+    {% endif %}
+  </div>
+
+  {% if existing %}
+    <h2>Update Resource Profile</h2>
+  {% else %}
+    <h2>First-Time Resource Profile Setup</h2>
+  {% endif %}
+
+  <form method="post" action="/peripheral/setup">
+    <label>Centre Name</label>
+    <input type="text" name="centre_name" required value="{{ centre.name if centre else '' }}" />
+
+    <h3 class="section-title">Infrastructure</h3>
+    <div class="checkbox-grid">
+      <label class="checkbox-item"><input type="checkbox" name="oxygen" {% if centre and centre.infrastructure and centre.infrastructure.oxygen %}checked{% endif %} /> Oxygen available</label>
+      <label class="checkbox-item"><input type="checkbox" name="suction" {% if centre and centre.infrastructure and centre.infrastructure.suction %}checked{% endif %} /> Suction available</label>
+      <label class="checkbox-item"><input type="checkbox" name="iv_fluids" {% if centre and centre.infrastructure and centre.infrastructure.iv_fluids %}checked{% endif %} /> IV fluids available</label>
+      <label class="checkbox-item"><input type="checkbox" name="nebulizer" {% if centre and centre.infrastructure and centre.infrastructure.nebulizer %}checked{% endif %} /> Nebulizer available</label>
+      <label class="checkbox-item"><input type="checkbox" name="power_backup" {% if centre and centre.infrastructure and centre.infrastructure.power_backup %}checked{% endif %} /> Power backup available</label>
+    </div>
+
+    <h3 class="section-title">Diagnostics Available</h3>
+    <div class="checkbox-grid">
+      <label class="checkbox-item"><input type="checkbox" name="blood_glucose" {% if centre and centre.diagnostics and centre.diagnostics.blood_glucose %}checked{% endif %} /> Blood glucose</label>
+      <label class="checkbox-item"><input type="checkbox" name="hemoglobin" {% if centre and centre.diagnostics and centre.diagnostics.hemoglobin %}checked{% endif %} /> Hemoglobin</label>
+      <label class="checkbox-item"><input type="checkbox" name="urine_test" {% if centre and centre.diagnostics and centre.diagnostics.urine_test %}checked{% endif %} /> Urine test</label>
+      <label class="checkbox-item"><input type="checkbox" name="malaria_test" {% if centre and centre.diagnostics and centre.diagnostics.malaria_test %}checked{% endif %} /> Malaria test</label>
+      <label class="checkbox-item"><input type="checkbox" name="ecg" {% if centre and centre.diagnostics and centre.diagnostics.ecg %}checked{% endif %} /> ECG</label>
+      <label class="checkbox-item"><input type="checkbox" name="xray" {% if centre and centre.diagnostics and centre.diagnostics.xray %}checked{% endif %} /> X-ray</label>
+      <label class="checkbox-item"><input type="checkbox" name="ultrasound" {% if centre and centre.diagnostics and centre.diagnostics.ultrasound %}checked{% endif %} /> Ultrasound</label>
+    </div>
+
+    <h3 class="section-title">Staff Competencies</h3>
+    <div class="checkbox-grid">
+      <label class="checkbox-item"><input type="checkbox" name="start_iv" {% if centre and centre.competencies and centre.competencies.start_iv %}checked{% endif %} /> Can start IV</label>
+      <label class="checkbox-item"><input type="checkbox" name="give_im" {% if centre and centre.competencies and centre.competencies.give_im %}checked{% endif %} /> Can give IM injection</label>
+      <label class="checkbox-item"><input type="checkbox" name="manage_airway" {% if centre and centre.competencies and centre.competencies.manage_airway %}checked{% endif %} /> Can manage airway</label>
+      <label class="checkbox-item"><input type="checkbox" name="intubate" {% if centre and centre.competencies and centre.competencies.intubate %}checked{% endif %} /> Can intubate</label>
+      <label class="checkbox-item"><input type="checkbox" name="manage_shock" {% if centre and centre.competencies and centre.competencies.manage_shock %}checked{% endif %} /> Can manage shock</label>
+      <label class="checkbox-item"><input type="checkbox" name="monitor_vitals" {% if centre and centre.competencies and centre.competencies.monitor_vitals %}checked{% endif %} /> Can monitor vitals continuously</label>
+    </div>
+
+    <h3 class="section-title">Medications</h3>
+    <p class="muted">Add each medication and mark if currently in stock.</p>
+    <div id="medications"></div>
+    <button type="button" class="btn secondary" id="add-med">Add Medication</button>
+
+    <div style="margin-top: 16px;">
+      <button class="btn" type="submit">Save Resource Profile</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  const medicationsRoot = document.getElementById("medications");
+  const addBtn = document.getElementById("add-med");
+
+  function createMedicationRow(name = "", inStock = false) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "row";
+    wrapper.style.marginBottom = "8px";
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.name = "medication_names";
+    nameInput.placeholder = "Drug name";
+    nameInput.value = name;
+    nameInput.style.flex = "2";
+
+    const stockLabel = document.createElement("label");
+    stockLabel.className = "checkbox-item";
+    stockLabel.style.margin = "0";
+
+    const stockInput = document.createElement("input");
+    stockInput.type = "checkbox";
+    stockInput.name = "medication_stock";
+    stockInput.value = name.toLowerCase().trim();
+    stockInput.checked = inStock;
+
+    nameInput.addEventListener("input", () => {
+      stockInput.value = nameInput.value.toLowerCase().trim();
+    });
+
+    const stockText = document.createElement("span");
+    stockText.textContent = "In stock";
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn secondary";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", () => wrapper.remove());
+
+    stockLabel.appendChild(stockInput);
+    stockLabel.appendChild(stockText);
+
+    wrapper.appendChild(nameInput);
+    wrapper.appendChild(stockLabel);
+    wrapper.appendChild(removeBtn);
+
+    medicationsRoot.appendChild(wrapper);
+  }
+
+  addBtn.addEventListener("click", () => createMedicationRow());
+
+  {% if centre and centre.medications %}
+    {% for med in centre.medications %}
+      createMedicationRow({{ med.drug_name | tojson }}, {{ 'true' if med.in_stock else 'false' }});
+    {% endfor %}
+  {% else %}
+    createMedicationRow();
+  {% endif %}
+</script>
+{% endblock %}

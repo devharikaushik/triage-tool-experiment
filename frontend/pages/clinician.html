@@ -1,0 +1,55 @@
+{% extends "pages/base.html" %}
+{% block content %}
+<div class="card">
+  <div class="row">
+    <a class="btn secondary" href="/">Home</a>
+  </div>
+  <h2>Clinician Mode</h2>
+  {% set action_url = '/clinician' %}
+  {% include "components/patient_form.html" %}
+</div>
+
+{% if output %}
+<div class="card">
+  <h2>Concise Clinical Output</h2>
+
+  <h3>Ranked Probable Diagnoses</h3>
+  <ol>
+    {% for item in output['Ranked Probable Diagnoses'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ol>
+
+  <h3>Supporting Findings</h3>
+  <ul>
+    {% for item in output['Supporting Findings'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Contradictory Findings</h3>
+  <ul>
+    {% for item in output['Contradictory Findings'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Immediate Rule-Outs</h3>
+  <ul>
+    {% for item in output['Immediate Rule-Outs'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Focused Next Tests</h3>
+  <ul>
+    {% for item in output['Focused Next Tests'] %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Suggested Disposition (Admit / Observe / Discharge)</h3>
+  <p><strong>{{ output['Suggested Disposition'] }}</strong></p>
+</div>
+{% endif %}
+{% endblock %}
