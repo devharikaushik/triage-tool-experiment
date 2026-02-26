@@ -31,6 +31,139 @@ def _case_text(patient_data: Dict[str, Any]) -> str:
     ).lower()
 
 
+def _rank_top_differentials(patient_data: Dict[str, Any], assessment: Dict[str, Any]) -> List[Dict[str, str]]:
+    text = _case_text(patient_data)
+    temp = _to_float(patient_data.get("temperature"))
+    pulse = _to_float(patient_data.get("pulse"))
+    spo2 = _to_float(patient_data.get("oxygen_saturation"))
+    systolic = _parse_bp(str(patient_data.get("blood_pressure", "")))
+
+    fever = temp is not None and temp >= 38.0
+    hypotension = systolic is not None and systolic < 90
+    hypoxia = spo2 is not None and spo2 < 92
+    tachy = pulse is not None and pulse >= 110
+
+    candidates: List[Dict[str, Any]] = [
+        {"diagnosis": "Community-acquired pneumonia / lower respiratory tract infection", "score": 0, "reason": ""},
+        {"diagnosis": "Acute asthma/COPD exacerbation", "score": 0, "reason": ""},
+        {"diagnosis": "Sepsis with hemodynamic compromise", "score": 0, "reason": ""},
+        {"diagnosis": "Acute coronary syndrome / cardiac ischemia", "score": 0, "reason": ""},
+        {"diagnosis": "Pulmonary edema / heart failure exacerbation", "score": 0, "reason": ""},
+        {"diagnosis": "Acute gastroenteritis with dehydration", "score": 0, "reason": ""},
+        {"diagnosis": "Hypoglycemia or glucose-related metabolic emergency", "score": 0, "reason": ""},
+        {"diagnosis": "Acute neurologic emergency (stroke/seizure/CNS event)", "score": 0, "reason": ""},
+        {"diagnosis": "Malaria or other febrile parasitic illness", "score": 0, "reason": ""},
+        {"diagnosis": "Urinary sepsis / pyelonephritis", "score": 0, "reason": ""},
+    ]
+
+    def bump(name: str, points: int, reason: str) -> None:
+        for item in candidates:
+            if item["diagnosis"] == name:
+                item["score"] += points
+                if not item["reason"]:
+                    item["reason"] = reason
+                return
+
+    respiratory = any(word in text for word in ["cough", "dyspnea", "breath", "sputum", "wheeze"])
+    chest_pain = "chest pain" in text or "pressure chest" in text or "tightness" in text
+    gi = any(word in text for word in ["vomit", "diarrhea", "diarrhoea", "abdominal"])
+    neuro = any(word in text for word in ["confus", "seizure", "unconscious", "stroke", "weakness"])
+    urinary = any(word in text for word in ["dysuria", "urine", "flank"])
+    malaria_pattern = any(word in text for word in ["rigor", "chills", "malaria"])
+    edema = any(word in text for word in ["orthopnea", "pnd", "edema", "swelling legs"])
+
+    if respiratory:
+        bump("Community-acquired pneumonia / lower respiratory tract infection", 3, "Respiratory symptom cluster is present.")
+        bump("Acute asthma/COPD exacerbation", 2, "Breathlessness/wheeze pattern suggests obstructive airway disease.")
+    if fever:
+        bump("Community-acquired pneumonia / lower respiratory tract infection", 2, "Fever increases likelihood of infection.")
+        bump("Sepsis with hemodynamic compromise", 2, "Fever with systemic illness supports sepsis consideration.")
+        bump("Malaria or other febrile parasitic illness", 1, "Fever compatible with tropical febrile illness.")
+    if hypoxia:
+        bump("Community-acquired pneumonia / lower respiratory tract infection", 2, "Low oxygen saturation supports pulmonary process.")
+        bump("Pulmonary edema / heart failure exacerbation", 2, "Hypoxia may indicate cardiopulmonary fluid overload.")
+    if hypotension:
+        bump("Sepsis with hemodynamic compromise", 4, "Hypotension indicates potential circulatory failure.")
+        bump("Acute gastroenteritis with dehydration", 2, "Hypotension can result from severe volume depletion.")
+    if tachy:
+        bump("Sepsis with hemodynamic compromise", 1, "Tachycardia supports systemic stress response.")
+        bump("Acute gastroenteritis with dehydration", 1, "Tachycardia can indicate dehydration.")
+    if chest_pain:
+        bump("Acute coronary syndrome / cardiac ischemia", 4, "Chest pain/tightness requires cardiac rule-out.")
+        bump("Pulmonary edema / heart failure exacerbation", 2, "Cardiorespiratory symptoms overlap with heart failure states.")
+    if edema:
+        bump("Pulmonary edema / heart failure exacerbation", 3, "Fluid overload symptoms support heart failure.")
+    if gi:
+        bump("Acute gastroenteritis with dehydration", 4, "GI losses strongly suggest gastroenteritis/dehydration.")
+    if neuro:
+        bump("Acute neurologic emergency (stroke/seizure/CNS event)", 5, "Neurologic danger terms are present.")
+    if urinary and fever:
+        bump("Urinary sepsis / pyelonephritis", 4, "Urinary symptoms with fever suggest urinary source infection.")
+    if "glucose" in text or "sugar" in text:
+        bump("Hypoglycemia or glucose-related metabolic emergency", 3, "Glucose-related concern appears in case data.")
+    if malaria_pattern and fever:
+        bump("Malaria or other febrile parasitic illness", 4, "Fever with rigors/chills raises malaria risk where relevant.")
+
+    if assessment["risk_level"] == "High":
+        bump("Sepsis with hemodynamic compromise", 1, "High-risk physiology increases concern for systemic critical illness.")
+
+    ranked = [item for item in candidates if item["score"] > 0]
+    if not ranked:
+        ranked = [
+            {
+                "diagnosis": "Undifferentiated acute illness (needs serial reassessment)",
+                "score": 1,
+                "reason": "Limited discriminating features in submitted data.",
+            }
+        ]
+
+    ranked.sort(key=lambda x: x["score"], reverse=True)
+    top = ranked[:5]
+    return [
+        {
+            "diagnosis": item["diagnosis"],
+            "reasoning": item["reason"] or "Supported by available symptom-vital pattern.",
+        }
+        for item in top
+    ]
+
+
+def _broad_management_paths(
+    assessment: Dict[str, Any],
+    missing: List[str],
+    stability: str,
+    refer_immediately: str,
+) -> Dict[str, List[str]]:
+    manage_here: List[str] = [
+        "Reassess ABC (airway, breathing, circulation) and repeat vitals at defined intervals.",
+        "Treat the leading syndrome while monitoring for deterioration.",
+        "Document response to each intervention and update disposition if risk changes.",
+    ]
+    if assessment["risk_level"] in {"Moderate", "High"}:
+        manage_here.append("Use high-frequency monitoring and senior escalation thresholds.")
+
+    before_referral: List[str] = list(assessment["stabilization_steps"])
+    before_referral.extend(
+        [
+            "Communicate referral early and confirm receiving facility acceptance.",
+            "Send transfer note with vitals trend, interventions, and pending concerns.",
+            "Escort with staff capable of airway/circulatory support if unstable.",
+        ]
+    )
+    if missing:
+        before_referral.insert(0, f"Missing local requirements: {', '.join(missing)}")
+
+    if stability == "Yes" and refer_immediately == "No":
+        before_referral = [
+            "Referral not immediately required if patient remains stable after reassessment."
+        ]
+
+    return {
+        "broad_management_if_admitted_here": manage_here,
+        "broad_management_before_referral": before_referral,
+    }
+
+
 def _infer_required_resources(patient_data: Dict[str, Any]) -> Dict[str, Any]:
     required: Set[str] = set()
     stabilization: Set[str] = set()
@@ -234,12 +367,28 @@ def run_resource_aware_triage(patient_data: Dict[str, Any], centre: Centre) -> D
             "Send transfer note with vitals and treatments already given",
         ]
 
+    treatable_here = stability == "Yes" and refer_immediately == "No"
+    flag_color = "Green Flag" if treatable_here else "Red Flag"
+    flag_message = (
+        "Case can be treated here based on current resource and competency cross-verification."
+        if treatable_here
+        else "Case exceeds current resource/competency capacity; referral pathway required."
+    )
+
+    management_paths = _broad_management_paths(assessment, missing, stability, refer_immediately)
+    top_differentials = _rank_top_differentials(patient_data, assessment)
+
     return {
         "Clinical Risk Level": assessment["risk_level"],
         "Stabilization Possible Here": stability,
         "Required Resources for this Case": assessment["required_resources"],
         "Missing Required Resources": missing,
+        "Top 5 Differentials": top_differentials,
+        "Treatment Feasibility Flag": flag_color,
+        "Flag Explanation": flag_message,
         "Refer Immediately": refer_immediately,
         "Steps Before Referral": pre_referral,
+        "Broad Management If Admitted Here": management_paths["broad_management_if_admitted_here"],
+        "Broad Management Before Referral": management_paths["broad_management_before_referral"],
         "Derived Flags": assessment["flags"],
     }

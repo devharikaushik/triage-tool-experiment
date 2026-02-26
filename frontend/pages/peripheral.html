@@ -49,6 +49,37 @@
   <h3>Refer Immediately (Yes/No)</h3>
   <p>{{ output['Refer Immediately'] }}</p>
 
+  <h3>Treatment Feasibility</h3>
+  <p>
+    {% if output['Treatment Feasibility Flag'] == 'Green Flag' %}
+      <strong style="color:#0f766e;">{{ output['Treatment Feasibility Flag'] }}</strong>
+    {% else %}
+      <strong style="color:#b91c1c;">{{ output['Treatment Feasibility Flag'] }}</strong>
+    {% endif %}
+  </p>
+  <p>{{ output['Flag Explanation'] }}</p>
+
+  <h3>Top 5 Differentials</h3>
+  <ol>
+    {% for item in output['Top 5 Differentials'] %}
+      <li><strong>{{ item.diagnosis }}</strong>: {{ item.reasoning }}</li>
+    {% endfor %}
+  </ol>
+
+  <h3>Broad Management If Admitted Here</h3>
+  <ul>
+    {% for step in output['Broad Management If Admitted Here'] %}
+      <li>{{ step }}</li>
+    {% endfor %}
+  </ul>
+
+  <h3>Broad Management Before Referral</h3>
+  <ul>
+    {% for step in output['Broad Management Before Referral'] %}
+      <li>{{ step }}</li>
+    {% endfor %}
+  </ul>
+
   <h3>Steps Before Referral</h3>
   <ul>
     {% for step in output['Steps Before Referral'] %}
