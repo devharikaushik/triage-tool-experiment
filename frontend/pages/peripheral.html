@@ -24,6 +24,17 @@
   <h3>Stabilization Possible Here (Yes/Partial/No)</h3>
   <p>{{ output['Stabilization Possible Here'] }}</p>
 
+  <h3>Required Resources for this Case</h3>
+  {% if output['Required Resources for this Case'] %}
+    <ul>
+      {% for item in output['Required Resources for this Case'] %}
+        <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>None</p>
+  {% endif %}
+
   <h3>Missing Required Resources</h3>
   {% if output['Missing Required Resources'] %}
     <ul>
@@ -44,6 +55,17 @@
       <li>{{ step }}</li>
     {% endfor %}
   </ul>
+
+  <h3>Detected Clinical Triggers</h3>
+  {% if output['Derived Flags'] %}
+    <ul>
+      {% for flag in output['Derived Flags'] %}
+        <li>{{ flag }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No major trigger flags detected.</p>
+  {% endif %}
 </div>
 {% endif %}
 {% endblock %}

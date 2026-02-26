@@ -20,50 +20,151 @@ def _parse_bp(bp: str) -> Optional[int]:
     return int(match.group(1))
 
 
+def _case_text(patient_data: Dict[str, Any]) -> str:
+    return " ".join(
+        [
+            str(patient_data.get("chief_complaint", "")),
+            str(patient_data.get("symptoms", "")),
+            str(patient_data.get("lab_values", "")),
+            str(patient_data.get("comorbidities", "")),
+        ]
+    ).lower()
+
+
 def _infer_required_resources(patient_data: Dict[str, Any]) -> Dict[str, Any]:
     required: Set[str] = set()
-    stabilization: List[str] = []
+    stabilization: Set[str] = set()
     flags: List[str] = []
+    required_diag: Set[str] = set()
 
     systolic = _parse_bp(str(patient_data.get("blood_pressure", "")))
     oxygen_sat = _to_float(patient_data.get("oxygen_saturation"))
     temp = _to_float(patient_data.get("temperature"))
     pulse = _to_float(patient_data.get("pulse"))
+    resp_rate = _to_float(patient_data.get("respiratory_rate"))
+    case_text = _case_text(patient_data)
 
-    risk = "Low"
+    respiratory_pattern = any(word in case_text for word in ["cough", "breath", "dyspnea", "wheeze", "chest"])
+    gi_pattern = any(word in case_text for word in ["vomit", "diarrhea", "diarrhoea", "abdominal", "dehydration"])
+    neuro_pattern = any(word in case_text for word in ["confus", "seizure", "unconscious", "stroke", "weakness"])
+    chest_pain_pattern = any(word in case_text for word in ["chest pain", "tightness", "pressure chest"])
+    malaria_pattern = any(word in case_text for word in ["chills", "rigors", "malaria"])
 
-    if systolic is not None and systolic < 90:
+    fever = temp is not None and temp >= 38.0
+    hypotension = systolic is not None and systolic < 90
+    severe_hypoxia = oxygen_sat is not None and oxygen_sat < 90
+    moderate_hypoxia = oxygen_sat is not None and oxygen_sat < 92
+    marked_tachycardia = pulse is not None and pulse >= 130
+    tachycardia = pulse is not None and pulse >= 110
+    tachypnea = resp_rate is not None and resp_rate >= 24
+
+    high_risk = False
+    risk_points = 0
+
+    if hypotension:
         flags.append("Shock physiology (SBP < 90)")
         required.update({"iv_fluids", "start_iv", "manage_shock", "monitor_vitals"})
-        stabilization.append("Establish IV access and start fluid resuscitation")
-        risk = "High"
+        stabilization.add("Establish IV access and start fluid resuscitation")
+        high_risk = True
 
-    if oxygen_sat is not None and oxygen_sat < 90:
+    if severe_hypoxia:
         flags.append("Severe hypoxia (SpO2 < 90)")
         required.update({"oxygen", "manage_airway", "monitor_vitals"})
-        stabilization.append("Administer supplemental oxygen and monitor saturation")
-        risk = "High"
+        stabilization.add("Administer supplemental oxygen and monitor saturation")
+        high_risk = True
+    elif moderate_hypoxia:
+        flags.append("Possible hypoxic respiratory compromise (SpO2 < 92)")
+        required.update({"oxygen", "monitor_vitals"})
+        stabilization.add("Start oxygen if available and reassess saturation trend")
+        risk_points += 2
 
-    if temp is not None and temp >= 39 and systolic is not None and systolic < 90:
+    if fever and hypotension:
         flags.append("Possible sepsis pattern (high fever + hypotension)")
         required.update({"iv_fluids", "start_iv", "manage_shock", "blood_glucose"})
-        stabilization.append("Begin sepsis stabilization bundle per local protocol")
-        risk = "High"
+        required_diag.update({"blood_glucose"})
+        stabilization.add("Begin sepsis stabilization bundle per local protocol")
+        high_risk = True
+    elif fever and (tachycardia or tachypnea):
+        flags.append("Possible systemic infection pattern (fever + physiologic stress)")
+        required.update({"monitor_vitals"})
+        required_diag.update({"blood_glucose"})
+        stabilization.add("Reassess perfusion, hydration, and progression every 15-30 minutes")
+        risk_points += 2
 
-    if pulse is not None and pulse >= 130 and risk != "High":
+    if marked_tachycardia:
         flags.append("Marked tachycardia")
         required.update({"monitor_vitals", "blood_glucose"})
-        stabilization.append("Continuous monitoring and focused reassessment")
-        risk = "Moderate"
+        required_diag.update({"blood_glucose"})
+        stabilization.add("Continuous monitoring and focused reassessment")
+        risk_points += 2
+    elif tachycardia:
+        flags.append("Tachycardia")
+        required.update({"monitor_vitals"})
+        stabilization.add("Repeat vitals after initial supportive care")
+        risk_points += 1
+
+    if tachypnea:
+        flags.append("Tachypnea")
+        required.update({"monitor_vitals"})
+        stabilization.add("Assess work of breathing and escalation threshold")
+        risk_points += 1
+
+    if respiratory_pattern:
+        flags.append("Respiratory symptom cluster")
+        required.update({"monitor_vitals"})
+        required_diag.update({"xray"})
+        stabilization.add("Position upright and give bronchodilator if wheeze is present")
+        risk_points += 1
+
+    if gi_pattern:
+        flags.append("Gastrointestinal fluid-loss pattern")
+        required.update({"iv_fluids", "start_iv", "monitor_vitals"})
+        required_diag.update({"blood_glucose"})
+        stabilization.add("Begin oral/IV rehydration based on severity")
+        risk_points += 1
+
+    if neuro_pattern:
+        flags.append("Neurologic danger pattern")
+        required.update({"manage_airway", "monitor_vitals", "blood_glucose"})
+        required_diag.update({"blood_glucose"})
+        stabilization.add("Check glucose immediately and protect airway if sensorium is reduced")
+        high_risk = True
+
+    if chest_pain_pattern:
+        flags.append("Chest pain/cardiac risk pattern")
+        required.update({"monitor_vitals", "oxygen"})
+        required_diag.update({"ecg"})
+        stabilization.add("Obtain ECG urgently and monitor for deterioration")
+        risk_points += 2
+
+    if malaria_pattern and fever:
+        flags.append("Fever with malaria-compatible pattern")
+        required_diag.update({"malaria_test"})
+        stabilization.add("Perform malaria testing early where endemic risk exists")
+        risk_points += 1
 
     if not flags:
-        stabilization.append("Continue routine monitoring and symptomatic care")
+        stabilization.add("Continue routine monitoring and symptomatic care")
+
+    required.update(required_diag)
+
+    if high_risk:
+        risk = "High"
+    elif risk_points >= 3:
+        risk = "Moderate"
+    else:
+        risk = "Low"
 
     return {
         "risk_level": risk,
         "flags": flags,
         "required_resources": sorted(required),
-        "stabilization_steps": stabilization,
+        "stabilization_steps": sorted(stabilization),
+        "critical_patterns": {
+            "shock_or_hypoxia": hypotension or severe_hypoxia,
+            "neurologic_danger": neuro_pattern,
+            "chest_pain_risk": chest_pain_pattern,
+        },
     }
 
 
@@ -119,7 +220,12 @@ def run_resource_aware_triage(patient_data: Dict[str, Any], centre: Centre) -> D
     else:
         stability = "No"
 
-    refer_immediately = "Yes" if assessment["risk_level"] == "High" and missing else "No"
+    critical = assessment["critical_patterns"]
+    refer_immediately = (
+        "Yes"
+        if assessment["risk_level"] == "High" and (missing or critical["chest_pain_risk"] or critical["neurologic_danger"])
+        else "No"
+    )
 
     pre_referral = assessment["stabilization_steps"]
     if missing:
@@ -131,6 +237,7 @@ def run_resource_aware_triage(patient_data: Dict[str, Any], centre: Centre) -> D
     return {
         "Clinical Risk Level": assessment["risk_level"],
         "Stabilization Possible Here": stability,
+        "Required Resources for this Case": assessment["required_resources"],
         "Missing Required Resources": missing,
         "Refer Immediately": refer_immediately,
         "Steps Before Referral": pre_referral,
